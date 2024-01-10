@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootswatch/5.3.0/journal/bootstrap.min.css"
+        integrity="sha512-fL7TPYZDZLsu0fvpKJ4v7KiS89RPDjOSxz4F0+TPxYROWP67IrErLBfYE2JonegRnhH+3MiMZXd+bJwYOAqwpw=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>News API</title>
+
+    <style>
+        .card {
+            height: 95%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-body {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">Navbar</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarColor01"
+                aria-controls="navbarColor01" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarColor01">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">Home
+                            <span class="visually-hidden">(current)</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">About</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button"
+                            aria-haspopup="true" aria-expanded="false">Sort By</a>
+                        <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" data-sortby="relevancy">Relevancy</a>
+                            <a class="dropdown-item" href="#" data-sortby="popularity">Popularity</a>
+                            <a class="dropdown-item" href="#" data-sortby="publishedAt">Published At</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" data-sortby="default">Default</a>
+                        </div>
+                    </li>
+                </ul>
+                <form class="d-flex">
+                    <input class="form-control me-sm-2" type="search" placeholder="Search" id="searchInput">
+                    <button class="btn btn-secondary  me-sm-2" type="submit">Search</button>
+                    <input class="form-control me-sm-2" type="text" placeholder="Select date" id="selectDateInput">
+                </form>
+            </div>
+        </div>
+    </nav>
+    <br>
+    <div class="container">
+        <div class="row" id="newsContainer">
+        </div>
+        <div class="row">
+            <div class="col-md-12 text-center">
+                <button class="btn btn-primary" id="nextPageBtn" style="margin-bottom: 15px;">Next Page</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- Popper.js -->
+    <!-- Popper.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.10.2/umd/popper.min.js"
+        integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm"
+        crossorigin="anonymous"></script>
+
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.4.1/dist/js/bootstrap.min.js"
+        integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"
+        crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const searchInput = document.getElementById("searchInput");
+            const newsContainer = document.getElementById("newsContainer");
+            const nextPageBtn = document.getElementById("nextPageBtn");
+            const selectDateInput = document.getElementById("selectDateInput");
+            const lang = 'en';
+            let currentPage = 1;
+
+            function formatDate(date) {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+
+            function getDefaultFromDate() {
+                const currentDate = new Date();
+                currentDate.setDate(currentDate.getDate() - 7);
+                return formatDate(currentDate);
+            }
+
+            function fetchNews(searchQuery, fromDate, page, sortBy) {
+                const apiUrl = `https://newsapi.org/v2/everything?q=${searchQuery}&language=${lang}&from=${fromDate}&sortBy=${sortBy || 'popularity'}&apiKey=b117751327744dbe99c23225706ce0a4&page=${page}`;
+
+                fetch(apiUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.articles.length === 0) {
+                            Swal.fire({
+                                icon: "error",
+                                title: "Oops...",
+                                text: `No results found for "${searchQuery}" on date "${fromDate}"`,
+                                footer: '<a href="#">Why do I have this issue?</a>'
+                            });
+                            fetchNews("India", 1);
+                        } else {
+                            const newsItems = data.articles.slice(0, 15);
+                            newsContainer.innerHTML = "";
+                            newsItems.forEach((item, index) => {
+                                const cardDiv = document.createElement("div");
+                                cardDiv.className = "col-md-4";
+                                cardDiv.innerHTML = `
+                                    <div class="card mb-3" style="max-width: 25rem;">
+                                        <h3 class="card-header">${item.title}</h3>
+                                        <div class="card-body">
+                                            <h5 class="card-title">${item.source.name}</h5>
+                                        </div>
+                                        <img src="${item.urlToImage}" class="card-img-top" alt="News Image">
+                                        <div class="card-body">
+                                            <p class="card-text">${item.description}</p>
+                                        </div>
+                                        <div class="card-body">
+                                            <a href="${item.url}" class="card-link" target="_blank">Detailed news</a>
+                                        </div>
+                                        <div class="card-footer text-muted">${item.publishedAt}</div>
+                                    </div>
+                                `;
+                                newsContainer.appendChild(cardDiv);
+                            });
+                        }
+                    })
+                    .catch(error => console.error("Error fetching news:", error));
+            }
+
+            document.querySelector("form").addEventListener("submit", function (event) {
+                event.preventDefault();
+                const searchQuery = searchInput.value.trim() || "India";
+                const fromDate = selectDateInput.value.trim() || getDefaultFromDate();
+                currentPage = 1;
+                fetchNews(searchQuery, fromDate, currentPage);
+            });
+
+            nextPageBtn.addEventListener("click", function () {
+                const searchQuery = searchInput.value.trim() || "India";
+                const fromDate = selectDateInput.value.trim() || getDefaultFromDate();
+                currentPage++;
+                fetchNews(searchQuery, fromDate, currentPage);
+            });
+
+            fetchNews("India", getDefaultFromDate(), currentPage);
+        });
+
+        $(document).ready(function () {
+            $('#selectDateInput').datepicker({
+                dateFormat: 'dd/mm/yy',
+                changeMonth: true,
+                changeYear: true,
+                maxDate: '0M',
+                minDate: '-6Y'
+            });
+
+            // Additional code to handle sortBy dynamically
+            const dropdownMenu = document.querySelector('.dropdown-menu');
+
+            dropdownMenu.addEventListener('click', function (event) {
+                const sortByOption = event.target.dataset.sortby;
+                if (sortByOption) {
+                    // Handle the case when 'Default' is selected
+                    const sortBy = (sortByOption === 'default') ? undefined : sortByOption;
+
+                    // Fetch news with the updated sortBy value
+                    const searchQuery = document.getElementById("searchInput").value.trim() || "India";
+                    const fromDate = document.getElementById("selectDateInput").value.trim() || getDefaultFromDate();
+                    const currentPage = 1;
+                    fetchNews(searchQuery, fromDate, currentPage, sortBy);
+                }
+            });
+        })
+    </script>
+</body>
+
+</html>
